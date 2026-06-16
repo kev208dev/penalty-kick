@@ -704,8 +704,7 @@ int main() {
         printf("  %s 최고!!\n", nara[me]);
     } else {
         saekkal(RED);
-        printf("  졌다...ㅠㅠ\n");
-        printf("  다음엔 꼭 이긴다!\n");
+        printf("패배\n");
     }
     saekkal(WHITE);
 
