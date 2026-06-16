@@ -18,7 +18,7 @@
 #define NARA_SU   12
 #define PLAYER_SU 26
 
-// 선수 구조체 (구조체 처음 써봄)
+
 typedef struct {
     int  num;
     char name[60];
@@ -26,7 +26,7 @@ typedef struct {
     char club[60];
 } Seonsu;
 
-// 선수 데이터 전역으로 넣음 (main에 넣으니까 너무 길어서)
+//선수 데이터
 Seonsu roster[NARA_SU][PLAYER_SU] = {
     // 0. 한국
     {
@@ -383,10 +383,26 @@ void saekkal(int c) {
 }
 
 void title() {
-    saekkal(YELLOW);
-    printf("=========================================\n");
-    printf("           패  널  티  킥  !!!!          \n");
-    printf("=========================================\n");
+    int i;
+    int colors[9] = {14, 11, 13, 11, 10, 11, 13, 11, 14};
+    // 유니코드 박스 문자로 꾸민 타이틀 (화려하게ㅋㅋ)
+    const char *lines[9] = {
+        "  \xE2\x95\x94\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x97",
+        "  \xE2\x95\x91                                              \xE2\x95\x91",
+        "  \xE2\x95\x91    \xE2\x98\x85   P E N A L T Y   K I C K  !   \xE2\x98\x85      \xE2\x95\x91",
+        "  \xE2\x95\x91                                              \xE2\x95\x91",
+        "  \xE2\x95\x91           \xE2\x9A\xBD   F I F A   2 0 2 6   \xE2\x9A\xBD             \xE2\x95\x91",
+        "  \xE2\x95\x91                                              \xE2\x95\x91",
+        "  \xE2\x95\x91              \xED\x8C\xA8 \xEB\x84\xA4 \xED\x8B\xB0 \xED\x82\xA5 !!                    \xE2\x95\x91",
+        "  \xE2\x95\x91                                              \xE2\x95\x91",
+        "  \xE2\x95\x9A\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x9D",
+    };
+    printf("\n");
+    for (i = 0; i < 9; i++) {
+        saekkal(colors[i]);
+        printf("%s\n", lines[i]);
+    }
+    printf("\n");
     saekkal(WHITE);
 }
 
@@ -418,15 +434,15 @@ void scoreBoard(char n1[], char n2[], int s1, int s2) {
     printf("\n");
 }
 
-// 선수 명단 출력 함수 (포지션별로 나눠서 보여줌)
-void showRoster(int teamIdx, char nara[][20]) {
+// 선수 명단 출력 : 포지션별
+void showRoster(int teamIdx, char nara[][20], char *gukgi[]) {
     char *posNames[4] = { "GK", "DF", "MF", "FW" };
     char *posKor[4]   = { "골키퍼", "수비수", "미드필더", "공격수" };
     int p, j;
 
     system("cls");
     saekkal(YELLOW);
-    printf("\n=== %s 선수 명단 (26명) ===\n\n", nara[teamIdx]);
+    printf("\n=== %s %s 선수 명단 (26명) ===\n\n", gukgi[teamIdx], nara[teamIdx]);
 
     for (p = 0; p < 4; p++) {
         saekkal(CYAN);
@@ -459,6 +475,21 @@ int main() {
         "프랑스", "잉글랜드", "스페인", "독일",
         "포르투갈", "네덜란드", "벨기에", "크로아티아"
     };
+    // 국기 이모지 (윈도우 터미널에서 뜸)
+    char *gukgi[NARA_SU] = {
+        "\xF0\x9F\x87\xB0\xF0\x9F\x87\xB7",  // 🇰🇷 한국
+        "\xF0\x9F\x87\xAF\xF0\x9F\x87\xB5",  // 🇯🇵 일본
+        "\xF0\x9F\x87\xA7\xF0\x9F\x87\xB7",  // 🇧🇷 브라질
+        "\xF0\x9F\x87\xA6\xF0\x9F\x87\xB7",  // 🇦🇷 아르헨티나
+        "\xF0\x9F\x87\xAB\xF0\x9F\x87\xB7",  // 🇫🇷 프랑스
+        "\xF0\x9F\x8F\xB4",                   // 🏴 잉글랜드
+        "\xF0\x9F\x87\xAA\xF0\x9F\x87\xB8",  // 🇪🇸 스페인
+        "\xF0\x9F\x87\xA9\xF0\x9F\x87\xAA",  // 🇩🇪 독일
+        "\xF0\x9F\x87\xB5\xF0\x9F\x87\xB9",  // 🇵🇹 포르투갈
+        "\xF0\x9F\x87\xB3\xF0\x9F\x87\xB1",  // 🇳🇱 네덜란드
+        "\xF0\x9F\x87\xA7\xF0\x9F\x87\xAA",  // 🇧🇪 벨기에
+        "\xF0\x9F\x87\xAD\xF0\x9F\x87\xB7",  // 🇭🇷 크로아티아
+    };
     int gongGyeok[NARA_SU] = { 80, 78, 95, 93, 92, 91, 89, 90, 88, 85, 84, 82 };
     int suBi[NARA_SU]      = { 82, 80, 88, 85, 90, 87, 88, 91, 84, 86, 83, 85 };
 
@@ -475,30 +506,30 @@ int main() {
     title();
     printf("\n");
     saekkal(CYAN);
-    printf("   아무 키나 누르면 시작!!\n");
+    printf("   아무 키나 눌러서 시작\n");
     saekkal(WHITE);
     _getch();
     system("cls");
 
-    // ===== 나라 선택 =====
+    // 나라선택
     title();
-    printf("\n나라를 골라라!!\n\n");
+    printf("\n나라 선택 ㄱㄱ\n\n");
     for (i = 0; i < NARA_SU; i++) {
-        printf("  %2d. %-12s  공격:%d  수비:%d\n",
-               i + 1, nara[i], gongGyeok[i], suBi[i]);
+        printf("  %2d. %s %-12s  공격:%d  수비:%d\n",
+               i + 1, gukgi[i], nara[i], gongGyeok[i], suBi[i]);
     }
 
     printf("\n번호 입력 (1~12) : ");
     scanf("%d", &me);
 
     if (me < 1 || me > 12) {
-        printf("잘못 눌렀음 -> 한국으로 할게\n");
+        printf("한국으로 함.\n");
         me = 1;
     }
     me = me - 1;
 
     // 선수 명단 보여주기
-    showRoster(me, nara);
+    showRoster(me, nara, gukgi);
 
     // 상대 나라 랜덤
     do {
@@ -519,7 +550,7 @@ int main() {
     printf("\n아무 키나 누르면 시작!!\n");
     _getch();
 
-    // ===== 5라운드 승부차기 =====
+    // 승부차기 
     for (round = 1; round <= 5; round++) {
 
         system("cls");
@@ -529,7 +560,7 @@ int main() {
 
         scoreBoard(nara[me], nara[ai], myScore, aiScore);
 
-        // --- 내 공격 ---
+        // 내 공격
         saekkal(GREEN);
         printf(">>> 내 차례 (공격) <<<\n");
         saekkal(WHITE);
@@ -560,25 +591,25 @@ int main() {
 
         if (result == 1) {
             saekkal(GREEN);
-            printf("\n  ★★ 골!!! 들어갔다!! ★★\n");
+            printf("\n  ★★ GOAL!! ★★\n");
             myScore++;
         } else if (myDir == aiBlock) {
             saekkal(RED);
-            printf("\n  막혔다!! 키퍼가 잡음ㅠ\n");
+            printf("\n  키퍼의 놀라운 선방!\n");
         } else {
             saekkal(RED);
-            printf("\n  실축...빗나갔다ㅠㅠ\n");
+            printf("\n  너무 긴장한 선수의 실축!\n");
         }
         saekkal(WHITE);
         Sleep(1200);
 
-        printf("\n아무 키나 누르면 계속...");
+        printf("\n아무 키나 눌러서 계속");
         _getch();
         system("cls");
 
         // --- 상대 공격 ---
         saekkal(RED);
-        printf(">>> 상대 차례 (막아라!!) <<<\n");
+        printf("상대 공격 차례\n");
         saekkal(WHITE);
 
         scoreBoard(nara[me], nara[ai], myScore, aiScore);
@@ -586,7 +617,7 @@ int main() {
 
         aiDir = rand() % 3;
 
-        printf("어디 막을래??\n");
+        printf("슛 방향 선택\n");
         printf("  1. 왼쪽\n");
         printf("  2. 가운데\n");
         printf("  3. 오른쪽\n");
@@ -595,7 +626,6 @@ int main() {
         if (myBlock < 1 || myBlock > 3) myBlock = 2;
         myBlock = myBlock - 1;
 
-        // 위에서 복붙하고 수정함
         if (aiDir == myBlock) {
             prob = gongGyeok[ai] - suBi[me] + 50;
             if (prob < 20) prob = 20;
@@ -610,19 +640,19 @@ int main() {
 
         if (result == 1) {
             saekkal(RED);
-            printf("\n  상대 골.. 들어갔다\n");
+            printf("\n  상대의 득점..\n");
             aiScore++;
         } else if (aiDir == myBlock) {
             saekkal(GREEN);
-            printf("\n  ★★ 막았다!! 세이브!! ★★\n");
+            printf("\n  ★★ 키퍼의 놀라운 선방! ★★\n");
         } else {
             saekkal(GREEN);
-            printf("\n  상대 실축!! 럭키~ㅋㅋ\n");
+            printf("\n  긴장한 상대의 실축!\n");
         }
         saekkal(WHITE);
         Sleep(1200);
 
-        printf("\n아무 키나 누르면 계속...");
+        printf("\n아무 키나 눌러서 계속");
         _getch();
     }
 
@@ -631,7 +661,7 @@ int main() {
 
         system("cls");
         saekkal(RED);
-        printf("\n\n  !!!! 서든데스 !!!!\n\n");
+        printf("\n\n  !! 서든데스 !!\n\n");
         saekkal(WHITE);
         Sleep(900);
 
@@ -639,7 +669,7 @@ int main() {
 
         // 내 슛
         goalDraw();
-        printf("마지막 찬스!! 어디 찰래?\n");
+        printf("슛 방향 선택\n");
         printf("  1. 왼  2. 가운데  3. 오른\n>> ");
         scanf("%d", &myDir);
         if (myDir < 1 || myDir > 3) myDir = 2;
@@ -658,16 +688,16 @@ int main() {
 
         Sleep(600);
         if (result == 1) {
-            saekkal(GREEN); printf("\n  골!!\n"); myScore++;
+            saekkal(GREEN); printf("\n  GOAL!!\n"); myScore++;
         } else {
-            saekkal(RED); printf("\n  실패..\n");
+            saekkal(RED); printf("\n  FAIL..\n");
         }
         saekkal(WHITE);
         Sleep(1100);
 
         // 상대 슛
         aiDir = rand() % 3;
-        printf("\n상대 차례! 어디 막을래?\n");
+        printf("\n 막을 곳 선택 \n");
         printf("  1. 왼  2. 가운데  3. 오른\n>> ");
         scanf("%d", &myBlock);
         if (myBlock < 1 || myBlock > 3) myBlock = 2;
@@ -684,15 +714,15 @@ int main() {
 
         Sleep(600);
         if (result == 1) {
-            saekkal(RED); printf("\n  상대 골..\n"); aiScore++;
+            saekkal(RED); printf("\n  상대의 득점..\n"); aiScore++;
         } else {
-            saekkal(GREEN); printf("\n  막았다!\n");
+            saekkal(GREEN); printf("\n 키퍼의 놀라운 선방!!\n");
         }
         saekkal(WHITE);
         Sleep(1100);
     }
 
-    // ===== 최종 결과 =====
+    // 최종결과
     system("cls");
     title();
     printf("\n");
@@ -700,8 +730,8 @@ int main() {
 
     if (myScore > aiScore) {
         saekkal(GREEN);
-        printf("  ★★★ 이겼다!!!! ★★★\n");
-        printf("  %s 최고!!\n", nara[me]);
+        printf("  ★★★ WIN!! ★★★\n");
+        printf("  %s 우승", nara[me]);
     } else {
         saekkal(RED);
         printf("패배\n");
