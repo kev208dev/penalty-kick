@@ -2,11 +2,48 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <windows.h>
-#include <conio.h>
+
+#ifdef _WIN32
+  #include <windows.h>
+  #include <conio.h>
+  #define CLEAR_SCREEN() system("cls")
+#else
+  #include <unistd.h>
+  #include <termios.h>
+  static void Sleep(unsigned ms) { usleep(ms * 1000); }
+  static int _getch(void) {
+      struct termios oldt, newt;
+      int ch;
+      tcgetattr(STDIN_FILENO, &oldt);
+      newt = oldt;
+      newt.c_lflag &= ~(ICANON | ECHO);
+      tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+      ch = getchar();
+      tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+      return ch;
+  }
+  static void SetConsoleTextAttribute(void *h, int c) {
+      const char *code = "\x1b[0m";
+      switch (c) {
+          case 12: code = "\x1b[91m"; break; // RED
+          case 10: code = "\x1b[92m"; break; // GREEN
+          case 14: code = "\x1b[93m"; break; // YELLOW
+          case 11: code = "\x1b[96m"; break; // CYAN
+          case 13: code = "\x1b[95m"; break; // PINK
+          case  7: code = "\x1b[0m";  break; // WHITE/reset
+      }
+      (void)h;
+      fputs(code, stdout);
+  }
+  static void *GetStdHandle(int x) { (void)x; return NULL; }
+  #define STD_OUTPUT_HANDLE 0
+  static void SetConsoleOutputCP(int cp) { (void)cp; }
+  #define CLEAR_SCREEN() system("clear")
+#endif
+
 
 // 패널티킥 게임 만들기 프로젝트!!
-// 2026 월드컵 실제 선수 명단 추가함!!
+// 2026 월드컵 실제 선수 명단 (각 팀 6명: GK 1명 + 5명)
 
 #define RED    12
 #define GREEN  10
@@ -16,7 +53,7 @@
 #define PINK   13
 
 #define NARA_SU   12
-#define PLAYER_SU 26
+#define PLAYER_SU 6
 
 
 typedef struct {
@@ -26,355 +63,115 @@ typedef struct {
     char club[60];
 } Seonsu;
 
-//선수 데이터
+//선수 데이터 (각 팀 GK 1명 + 5명)
 Seonsu roster[NARA_SU][PLAYER_SU] = {
     // 0. 한국
     {
-        { 1, "김승규",           "GK", "FC Tokyo" },
-        {12, "송범근",           "GK", "Jeonbuk Hyundai Motors" },
-        {21, "조현우",           "GK", "Ulsan HD" },
-        { 2, "이한범",           "DF", "Midtjylland" },
-        { 4, "김민재",           "DF", "Bayern Munich" },
-        { 5, "김태현",           "DF", "Kashima Antlers" },
-        {13, "이태석",           "DF", "Austria Wien" },
-        {14, "조위제",           "DF", "Jeonbuk Hyundai Motors" },
-        {15, "김문환",           "DF", "Daejeon Hana Citizen" },
-        {16, "박진섭",           "DF", "Zhejiang" },
-        {22, "설영우",           "DF", "Red Star Belgrade" },
-        {23, "옌스 카스트로프",  "DF", "Borussia Monchengladbach" },
-        { 3, "이기혁",           "MF", "Gangwon FC" },
-        { 6, "황인범",           "MF", "Feyenoord" },
-        { 8, "백승호",           "MF", "Birmingham City" },
-        {10, "이재성",           "MF", "Mainz 05" },
-        {11, "황희찬",           "MF", "Wolverhampton Wanderers" },
-        {17, "배준호",           "MF", "Stoke City" },
-        {19, "이강인",           "MF", "Paris Saint-Germain" },
-        {20, "양현준",           "MF", "Celtic" },
-        {24, "김진규",           "MF", "Jeonbuk Hyundai Motors" },
-        {25, "엄지성",           "MF", "Swansea City" },
-        {26, "이동경",           "MF", "Ulsan HD" },
-        { 7, "손흥민 (주장)",    "FW", "Los Angeles FC" },
-        { 9, "조규성",           "FW", "Midtjylland" },
-        {18, "오현규",           "FW", "Besiktas" },
+        { 1, "김승규",        "GK", "FC Tokyo" },
+        { 4, "김민재",        "DF", "Bayern Munich" },
+        {10, "이재성",        "MF", "Mainz 05" },
+        {11, "황희찬",        "MF", "Wolverhampton Wanderers" },
+        {19, "이강인",        "MF", "Paris Saint-Germain" },
+        { 7, "손흥민 (주장)", "FW", "Los Angeles FC" },
     },
     // 1. 일본
     {
-        { 1, "Zion Suzuki",        "GK", "Parma" },
-        {12, "Keisuke Osako",      "GK", "Sanfrecce Hiroshima" },
-        {23, "Tomoki Hayakawa",    "GK", "Kashima Antlers" },
-        { 2, "Yukinari Sugawara",  "DF", "Werder Bremen" },
-        { 3, "Shogo Taniguchi",    "DF", "Sint-Truiden" },
-        { 4, "Ko Itakura (주장)",  "DF", "Ajax" },
-        { 5, "Yuto Nagatomo",      "DF", "FC Tokyo" },
-        {16, "Tsuyoshi Watanabe",  "DF", "Feyenoord" },
-        {20, "Ayumu Seko",         "DF", "Le Havre" },
-        {21, "Hiroki Ito",         "DF", "Bayern Munich" },
-        {22, "Takehiro Tomiyasu",  "DF", "Ajax" },
-        {25, "Junnosuke Suzuki",   "DF", "Copenhagen" },
-        { 7, "Ao Tanaka",          "MF", "Leeds United" },
-        { 8, "Takefusa Kubo",      "MF", "Real Sociedad" },
-        {10, "Ritsu Doan",         "MF", "Eintracht Frankfurt" },
-        {11, "Daizen Maeda",       "MF", "Celtic" },
-        {13, "Keito Nakamura",     "MF", "Reims" },
-        {14, "Junya Ito",          "MF", "Genk" },
-        {15, "Daichi Kamada",      "MF", "Crystal Palace" },
-        {17, "Yuito Suzuki",       "MF", "SC Freiburg" },
-        {24, "Kaishu Sano",        "MF", "Mainz 05" },
-        { 6, "Shuto Machino",      "FW", "Borussia Monchengladbach" },
-        { 9, "Keisuke Goto",       "FW", "Sint-Truiden" },
-        {18, "Ayase Ueda",         "FW", "Feyenoord" },
-        {19, "Koki Ogawa",         "FW", "NEC" },
-        {26, "Kento Shiogai",      "FW", "VfL Wolfsburg" },
+        { 1, "Zion Suzuki",       "GK", "Parma" },
+        { 4, "Ko Itakura (주장)", "DF", "Ajax" },
+        { 8, "Takefusa Kubo",     "MF", "Real Sociedad" },
+        {10, "Ritsu Doan",        "MF", "Eintracht Frankfurt" },
+        {15, "Daichi Kamada",     "MF", "Crystal Palace" },
+        {18, "Ayase Ueda",        "FW", "Feyenoord" },
     },
     // 2. 브라질
     {
-        { 1, "Alisson",            "GK", "Liverpool" },
-        {12, "Weverton",           "GK", "Gremio" },
-        {23, "Ederson Moraes",     "GK", "Fenerbahce" },
-        { 3, "Gabriel Magalhaes",  "DF", "Arsenal" },
-        { 4, "Marquinhos (주장)",  "DF", "Paris Saint-Germain" },
-        { 6, "Alex Sandro",        "DF", "Flamengo" },
-        {13, "Danilo Luiz",        "DF", "Flamengo" },
-        {14, "Bremer",             "DF", "Juventus" },
-        {15, "Leo Pereira",        "DF", "Flamengo" },
-        {16, "Douglas Santos",     "DF", "Zenit Saint Petersburg" },
-        {24, "Roger Ibanez",       "DF", "Al-Ahli" },
-        { 2, "Ederson Silva",      "MF", "Atalanta" },
-        { 5, "Casemiro",           "MF", "Manchester United" },
-        { 8, "Bruno Guimaraes",    "MF", "Newcastle United" },
-        {17, "Fabinho",            "MF", "Al-Ittihad" },
-        {18, "Danilo Santos",      "MF", "Botafogo" },
-        {20, "Lucas Paqueta",      "MF", "Flamengo" },
-        { 7, "Vinicius Junior",    "FW", "Real Madrid" },
-        { 9, "Matheus Cunha",      "FW", "Manchester United" },
-        {10, "Neymar",             "FW", "Santos" },
-        {11, "Raphinha",           "FW", "Barcelona" },
-        {19, "Endrick",            "FW", "Lyon" },
-        {21, "Luiz Henrique",      "FW", "Zenit Saint Petersburg" },
-        {22, "Gabriel Martinelli", "FW", "Arsenal" },
-        {25, "Igor Thiago",        "FW", "Brentford" },
-        {26, "Rayan",              "FW", "Bournemouth" },
+        { 1, "Alisson",           "GK", "Liverpool" },
+        { 4, "Marquinhos (주장)", "DF", "Paris Saint-Germain" },
+        { 5, "Casemiro",          "MF", "Manchester United" },
+        { 7, "Vinicius Junior",   "FW", "Real Madrid" },
+        {10, "Neymar",            "FW", "Santos" },
+        {11, "Raphinha",          "FW", "Barcelona" },
     },
     // 3. 아르헨티나
     {
-        { 1, "Juan Musso",             "GK", "Atletico Madrid" },
-        {12, "Geronimo Rulli",         "GK", "Marseille" },
-        {23, "Emiliano Martinez",      "GK", "Aston Villa" },
-        { 2, "Marcos Senesi",          "DF", "Bournemouth" },
-        { 3, "Nicolas Tagliafico",     "DF", "Lyon" },
-        { 4, "Gonzalo Montiel",        "DF", "River Plate" },
-        { 6, "Lisandro Martinez",      "DF", "Manchester United" },
-        {13, "Cristian Romero",        "DF", "Tottenham Hotspur" },
-        {19, "Nicolas Otamendi",       "DF", "Benfica" },
-        {25, "Facundo Medina",         "DF", "Marseille" },
-        {26, "Nahuel Molina",          "DF", "Atletico Madrid" },
-        { 5, "Leandro Paredes",        "MF", "Boca Juniors" },
-        { 7, "Rodrigo De Paul",        "MF", "Inter Miami CF" },
-        { 8, "Valentin Barco",         "MF", "Strasbourg" },
-        {11, "Giovani Lo Celso",       "MF", "Real Betis" },
-        {14, "Exequiel Palacios",      "MF", "Bayer Leverkusen" },
-        {15, "Nicolas Gonzalez",       "MF", "Atletico Madrid" },
-        {20, "Alexis Mac Allister",    "MF", "Liverpool" },
-        {24, "Enzo Fernandez",         "MF", "Chelsea" },
-        { 9, "Julian Alvarez",         "FW", "Atletico Madrid" },
-        {10, "Lionel Messi (주장)",    "FW", "Inter Miami CF" },
-        {16, "Thiago Almada",          "FW", "Atletico Madrid" },
-        {17, "Giuliano Simeone",       "FW", "Atletico Madrid" },
-        {18, "Nico Paz",               "FW", "Como" },
-        {21, "Jose Manuel Lopez",      "FW", "Palmeiras" },
-        {22, "Lautaro Martinez",       "FW", "Inter Milan" },
+        {23, "Emiliano Martinez",   "GK", "Aston Villa" },
+        {13, "Cristian Romero",     "DF", "Tottenham Hotspur" },
+        {24, "Enzo Fernandez",      "MF", "Chelsea" },
+        { 9, "Julian Alvarez",      "FW", "Atletico Madrid" },
+        {10, "Lionel Messi (주장)", "FW", "Inter Miami CF" },
+        {22, "Lautaro Martinez",    "FW", "Inter Milan" },
     },
     // 4. 프랑스
     {
-        { 1, "Brice Samba",          "GK", "Rennes" },
         {16, "Mike Maignan",         "GK", "Milan" },
-        {23, "Robin Risser",         "GK", "Lens" },
-        { 2, "Malo Gusto",           "DF", "Chelsea" },
-        { 3, "Lucas Digne",          "DF", "Aston Villa" },
         { 4, "Dayot Upamecano",      "DF", "Bayern Munich" },
-        { 5, "Jules Kounde",         "DF", "Barcelona" },
-        {15, "Ibrahima Konate",      "DF", "Liverpool" },
-        {17, "William Saliba",       "DF", "Arsenal" },
-        {19, "Theo Hernandez",       "DF", "Al-Hilal" },
-        {21, "Lucas Hernandez",      "DF", "Paris Saint-Germain" },
-        {26, "Maxence Lacroix",      "DF", "Crystal Palace" },
-        { 6, "Manu Kone",            "MF", "Roma" },
         { 8, "Aurelien Tchouameni",  "MF", "Real Madrid" },
-        {13, "N'Golo Kante",         "MF", "Fenerbahce" },
-        {14, "Adrien Rabiot",        "MF", "Milan" },
-        {18, "Warren Zaire-Emery",   "MF", "Paris Saint-Germain" },
-        {24, "Rayan Cherki",         "MF", "Manchester City" },
-        {25, "Maghnes Akliouche",    "MF", "Monaco" },
         { 7, "Ousmane Dembele",      "FW", "Paris Saint-Germain" },
-        { 9, "Marcus Thuram",        "FW", "Inter Milan" },
         {10, "Kylian Mbappe (주장)", "FW", "Real Madrid" },
         {11, "Michael Olise",        "FW", "Bayern Munich" },
-        {12, "Bradley Barcola",      "FW", "Paris Saint-Germain" },
-        {20, "Desire Doue",          "FW", "Paris Saint-Germain" },
-        {22, "Jean-Philippe Mateta", "FW", "Crystal Palace" },
     },
     // 5. 잉글랜드
     {
         { 1, "Jordan Pickford",   "GK", "Everton" },
-        {13, "Dean Henderson",    "GK", "Crystal Palace" },
-        {23, "James Trafford",    "GK", "Manchester City" },
-        { 2, "Ezri Konsa",        "DF", "Aston Villa" },
-        { 3, "Nico O'Reilly",     "DF", "Manchester City" },
         { 5, "John Stones",       "DF", "Manchester City" },
-        { 6, "Marc Guehi",        "DF", "Manchester City" },
-        {12, "Tino Livramento",   "DF", "Newcastle United" },
-        {15, "Dan Burn",          "DF", "Newcastle United" },
-        {24, "Reece James",       "DF", "Chelsea" },
-        {25, "Djed Spence",       "DF", "Tottenham Hotspur" },
-        {26, "Jarell Quansah",    "DF", "Bayer Leverkusen" },
         { 4, "Declan Rice",       "MF", "Arsenal" },
-        { 8, "Elliot Anderson",   "MF", "Nottingham Forest" },
         {10, "Jude Bellingham",   "MF", "Real Madrid" },
-        {14, "Jordan Henderson",  "MF", "Brentford" },
-        {16, "Kobbie Mainoo",     "MF", "Manchester United" },
-        {17, "Morgan Rogers",     "MF", "Aston Villa" },
-        {21, "Eberechi Eze",      "MF", "Arsenal" },
         { 7, "Bukayo Saka",       "FW", "Arsenal" },
         { 9, "Harry Kane (주장)", "FW", "Bayern Munich" },
-        {11, "Marcus Rashford",   "FW", "Barcelona" },
-        {18, "Anthony Gordon",    "FW", "Newcastle United" },
-        {19, "Ollie Watkins",     "FW", "Aston Villa" },
-        {20, "Noni Madueke",      "FW", "Arsenal" },
-        {22, "Ivan Toney",        "FW", "Al-Ahli" },
     },
     // 6. 스페인
     {
-        { 1, "David Raya",           "GK", "Arsenal" },
-        {13, "Joan Garcia",          "GK", "Barcelona" },
-        {23, "Unai Simon",           "GK", "Athletic Bilbao" },
-        { 2, "Marc Pubill",          "DF", "Atletico Madrid" },
-        { 3, "Alex Grimaldo",        "DF", "Bayer Leverkusen" },
-        { 4, "Eric Garcia",          "DF", "Barcelona" },
-        { 5, "Marcos Llorente",      "DF", "Atletico Madrid" },
-        {12, "Pedro Porro",          "DF", "Tottenham Hotspur" },
-        {14, "Aymeric Laporte",      "DF", "Athletic Bilbao" },
-        {22, "Pau Cubarsi",          "DF", "Barcelona" },
-        {24, "Marc Cucurella",       "DF", "Chelsea" },
-        { 6, "Mikel Merino",         "MF", "Arsenal" },
-        { 8, "Fabian Ruiz",          "MF", "Paris Saint-Germain" },
-        { 9, "Gavi",                 "MF", "Barcelona" },
-        {15, "Alex Baena",           "MF", "Atletico Madrid" },
-        {16, "Rodri (주장)",         "MF", "Manchester City" },
-        {18, "Martin Zubimendi",     "MF", "Arsenal" },
-        {20, "Pedri",                "MF", "Barcelona" },
-        { 7, "Ferran Torres",        "FW", "Barcelona" },
-        {10, "Dani Olmo",            "FW", "Barcelona" },
-        {11, "Yeremy Pino",          "FW", "Crystal Palace" },
-        {17, "Nico Williams",        "FW", "Athletic Bilbao" },
-        {19, "Lamine Yamal",         "FW", "Barcelona" },
-        {21, "Mikel Oyarzabal",      "FW", "Real Sociedad" },
-        {25, "Victor Munoz",         "FW", "Osasuna" },
-        {26, "Borja Iglesias",       "FW", "Celta Vigo" },
+        { 1, "David Raya",      "GK", "Arsenal" },
+        {14, "Aymeric Laporte", "DF", "Athletic Bilbao" },
+        {16, "Rodri (주장)",    "MF", "Manchester City" },
+        {20, "Pedri",           "MF", "Barcelona" },
+        {19, "Lamine Yamal",    "FW", "Barcelona" },
+        {10, "Dani Olmo",       "FW", "Barcelona" },
     },
     // 7. 독일
     {
-        { 1, "Manuel Neuer",             "GK", "Bayern Munich" },
-        {12, "Oliver Baumann",           "GK", "TSG Hoffenheim" },
-        {21, "Alexander Nubel",          "GK", "VfB Stuttgart" },
-        { 2, "Antonio Rudiger",          "DF", "Real Madrid" },
-        { 3, "Waldemar Anton",           "DF", "Borussia Dortmund" },
-        { 4, "Jonathan Tah",             "DF", "Bayern Munich" },
-        { 6, "Joshua Kimmich (주장)",    "DF", "Bayern Munich" },
-        {15, "Nico Schlotterbeck",       "DF", "Borussia Dortmund" },
-        {18, "Nathaniel Brown",          "DF", "Eintracht Frankfurt" },
-        {22, "David Raum",               "DF", "RB Leipzig" },
-        {24, "Malick Thiaw",             "DF", "Newcastle United" },
-        { 5, "Aleksandar Pavlovic",      "MF", "Bayern Munich" },
-        { 8, "Leon Goretzka",            "MF", "Bayern Munich" },
-        { 9, "Jamie Leweling",           "MF", "VfB Stuttgart" },
-        {10, "Jamal Musiala",            "MF", "Bayern Munich" },
-        {13, "Pascal Gross",             "MF", "Brighton & Hove Albion" },
-        {16, "Angelo Stiller",           "MF", "VfB Stuttgart" },
-        {17, "Florian Wirtz",            "MF", "Liverpool" },
-        {19, "Leroy Sane",               "MF", "Galatasaray" },
-        {20, "Nadiem Amiri",             "MF", "Mainz 05" },
-        {23, "Felix Nmecha",             "MF", "Borussia Dortmund" },
-        {25, "Assan Ouedraogo",          "MF", "RB Leipzig" },
-        { 7, "Kai Havertz",              "FW", "Arsenal" },
-        {11, "Nick Woltemade",           "FW", "Newcastle United" },
-        {14, "Maximilian Beier",         "FW", "Borussia Dortmund" },
-        {26, "Deniz Undav",              "FW", "VfB Stuttgart" },
+        { 1, "Manuel Neuer",          "GK", "Bayern Munich" },
+        { 2, "Antonio Rudiger",       "DF", "Real Madrid" },
+        { 6, "Joshua Kimmich (주장)", "DF", "Bayern Munich" },
+        {10, "Jamal Musiala",         "MF", "Bayern Munich" },
+        {17, "Florian Wirtz",         "MF", "Liverpool" },
+        { 7, "Kai Havertz",           "FW", "Arsenal" },
     },
     // 8. 포르투갈
     {
-        { 1, "Diogo Costa",               "GK", "Porto" },
-        {12, "Jose Sa",                   "GK", "Wolverhampton Wanderers" },
-        {22, "Rui Silva",                 "GK", "Sporting CP" },
-        { 2, "Nelson Semedo",             "DF", "Fenerbahce" },
-        { 3, "Ruben Dias",                "DF", "Manchester City" },
-        { 4, "Tomas Araujo",              "DF", "Benfica" },
-        { 5, "Diogo Dalot",               "DF", "Manchester United" },
-        {13, "Renato Veiga",              "DF", "Villarreal" },
-        {14, "Goncalo Inacio",            "DF", "Sporting CP" },
-        {20, "Joao Cancelo",              "DF", "Barcelona" },
-        {24, "Samu Costa",                "DF", "Mallorca" },
-        {25, "Nuno Mendes",               "DF", "Paris Saint-Germain" },
-        { 6, "Matheus Nunes",             "MF", "Manchester City" },
-        { 8, "Bruno Fernandes",           "MF", "Manchester United" },
-        {10, "Bernardo Silva",            "MF", "Manchester City" },
-        {15, "Joao Neves",                "MF", "Paris Saint-Germain" },
-        {21, "Ruben Neves",               "MF", "Al-Hilal" },
-        {23, "Vitinha",                   "MF", "Paris Saint-Germain" },
-        { 7, "Cristiano Ronaldo (주장)",  "FW", "Al-Nassr" },
-        { 9, "Goncalo Ramos",             "FW", "Paris Saint-Germain" },
-        {11, "Joao Felix",                "FW", "Al-Nassr" },
-        {16, "Francisco Trincao",         "FW", "Sporting CP" },
-        {17, "Rafael Leao",               "FW", "Milan" },
-        {18, "Pedro Neto",                "FW", "Chelsea" },
-        {19, "Goncalo Guedes",            "FW", "Real Sociedad" },
-        {26, "Francisco Conceicao",       "FW", "Juventus" },
+        { 1, "Diogo Costa",              "GK", "Porto" },
+        { 3, "Ruben Dias",               "DF", "Manchester City" },
+        { 8, "Bruno Fernandes",          "MF", "Manchester United" },
+        {10, "Bernardo Silva",           "MF", "Manchester City" },
+        { 7, "Cristiano Ronaldo (주장)", "FW", "Al-Nassr" },
+        {17, "Rafael Leao",              "FW", "Milan" },
     },
     // 9. 네덜란드
     {
         { 1, "Bart Verbruggen",        "GK", "Brighton & Hove Albion" },
-        {13, "Robin Roefs",            "GK", "Sunderland" },
-        {23, "Mark Flekken",           "GK", "Bayer Leverkusen" },
-        { 2, "Lutsharel Geertruida",   "DF", "Sunderland" },
         { 4, "Virgil van Dijk (주장)", "DF", "Liverpool" },
-        { 5, "Nathan Ake",             "DF", "Manchester City" },
-        { 6, "Jan Paul van Hecke",     "DF", "Brighton & Hove Albion" },
-        {12, "Mats Wieffer",           "DF", "Brighton & Hove Albion" },
-        {15, "Micky van de Ven",       "DF", "Tottenham Hotspur" },
-        {22, "Denzel Dumfries",        "DF", "Inter Milan" },
-        {25, "Jorrel Hato",            "DF", "Chelsea" },
-        { 3, "Marten de Roon",         "MF", "Atalanta" },
-        { 7, "Justin Kluivert",        "MF", "Bournemouth" },
-        { 8, "Ryan Gravenberch",       "MF", "Liverpool" },
-        {14, "Tijjani Reijnders",      "MF", "Manchester City" },
-        {16, "Guus Til",               "MF", "PSV Eindhoven" },
-        {20, "Teun Koopmeiners",       "MF", "Juventus" },
         {21, "Frenkie de Jong",        "MF", "Barcelona" },
-        {26, "Quinten Timber",         "MF", "Marseille" },
-        { 9, "Wout Weghorst",          "FW", "Ajax" },
         {10, "Memphis Depay",          "FW", "Corinthians" },
         {11, "Cody Gakpo",             "FW", "Liverpool" },
-        {17, "Noa Lang",               "FW", "Galatasaray" },
         {18, "Donyell Malen",          "FW", "Roma" },
-        {19, "Brian Brobbey",          "FW", "Sunderland" },
-        {24, "Crysencio Summerville",  "FW", "West Ham United" },
     },
     // 10. 벨기에
     {
-        { 1, "Thibaut Courtois",        "GK", "Real Madrid" },
-        {12, "Senne Lammens",           "GK", "Manchester United" },
-        {13, "Mike Penders",            "GK", "Strasbourg" },
-        { 2, "Zeno Debast",             "DF", "Sporting CP" },
-        { 3, "Arthur Theate",           "DF", "Eintracht Frankfurt" },
-        { 4, "Brandon Mechele",         "DF", "Club Brugge" },
-        { 5, "Maxim De Cuyper",         "DF", "Brighton & Hove Albion" },
-        {15, "Thomas Meunier",          "DF", "Lille" },
-        {16, "Koni De Winter",          "DF", "Milan" },
-        {18, "Joaquin Seys",            "DF", "Club Brugge" },
-        {21, "Timothy Castagne",        "DF", "Fulham" },
-        {25, "Nathan Ngoy",             "DF", "Lille" },
-        { 6, "Axel Witsel",             "MF", "Girona" },
-        { 7, "Kevin De Bruyne",         "MF", "Napoli" },
-        { 8, "Youri Tielemans (주장)",  "MF", "Aston Villa" },
-        {19, "Diego Moreira",           "MF", "Strasbourg" },
-        {20, "Hans Vanaken",            "MF", "Club Brugge" },
-        {22, "Alexis Saelemaekers",     "MF", "Milan" },
-        {23, "Nicolas Raskin",          "MF", "Rangers" },
-        {24, "Amadou Onana",            "MF", "Aston Villa" },
-        { 9, "Romelu Lukaku",           "FW", "Napoli" },
-        {10, "Leandro Trossard",        "FW", "Arsenal" },
-        {11, "Jeremy Doku",             "FW", "Manchester City" },
-        {14, "Dodi Lukebakio",          "FW", "Benfica" },
-        {17, "Charles De Ketelaere",    "FW", "Atalanta" },
-        {26, "Matias Fernandez-Pardo",  "FW", "Lille" },
+        { 1, "Thibaut Courtois",       "GK", "Real Madrid" },
+        { 2, "Zeno Debast",            "DF", "Sporting CP" },
+        { 7, "Kevin De Bruyne",        "MF", "Napoli" },
+        { 9, "Romelu Lukaku",          "FW", "Napoli" },
+        {11, "Jeremy Doku",            "FW", "Manchester City" },
+        {10, "Leandro Trossard",       "FW", "Arsenal" },
     },
     // 11. 크로아티아
     {
-        { 1, "Dominik Livakovic",    "GK", "Dinamo Zagreb" },
-        {12, "Ivor Pandur",          "GK", "Hull City" },
-        {23, "Dominik Kotarski",     "GK", "Copenhagen" },
-        { 2, "Josip Stanisic",       "DF", "Bayern Munich" },
-        { 3, "Marin Pongraci",       "DF", "Fiorentina" },
-        { 4, "Josko Gvardiol",       "DF", "Manchester City" },
-        { 5, "Duje Caleta-Car",      "DF", "Real Sociedad" },
-        { 6, "Josip Sutalo",         "DF", "Ajax" },
-        {18, "Kristijan Jakic",      "DF", "FC Augsburg" },
-        {22, "Luka Vuskovic",        "DF", "Hamburger SV" },
-        {25, "Martin Erlic",         "DF", "Midtjylland" },
-        { 7, "Nikola Moro",          "MF", "Bologna" },
-        { 8, "Mateo Kovacic",        "MF", "Manchester City" },
-        {10, "Luka Modric (주장)",   "MF", "Milan" },
-        {13, "Nikola Vlasic",        "MF", "Torino" },
-        {15, "Mario Pasalic",        "MF", "Atalanta" },
-        {16, "Martin Baturina",      "MF", "Como" },
-        {17, "Petar Sucic",          "MF", "Inter Milan" },
-        {19, "Toni Fruk",            "MF", "Rijeka" },
-        {21, "Luka Sucic",           "MF", "Real Sociedad" },
-        { 9, "Andrej Kramaric",      "FW", "TSG Hoffenheim" },
-        {11, "Ante Budimir",         "FW", "Osasuna" },
-        {14, "Ivan Perisic",         "FW", "PSV Eindhoven" },
-        {20, "Igor Matanovic",       "FW", "SC Freiburg" },
-        {24, "Marco Pasalic",        "FW", "Orlando City SC" },
-        {26, "Petar Musa",           "FW", "FC Dallas" },
+        { 1, "Dominik Livakovic",  "GK", "Dinamo Zagreb" },
+        { 4, "Josko Gvardiol",     "DF", "Manchester City" },
+        { 8, "Mateo Kovacic",      "MF", "Manchester City" },
+        {10, "Luka Modric (주장)", "MF", "Milan" },
+        { 9, "Andrej Kramaric",    "FW", "TSG Hoffenheim" },
+        {14, "Ivan Perisic",       "FW", "PSV Eindhoven" },
     },
 };
 
@@ -434,31 +231,24 @@ void scoreBoard(char n1[], char n2[], int s1, int s2) {
     printf("\n");
 }
 
-// 선수 명단 출력 : 포지션별
+// 선수 명단 출력
 void showRoster(int teamIdx, char nara[][20], char *gukgi[]) {
-    char *posNames[4] = { "GK", "DF", "MF", "FW" };
-    char *posKor[4]   = { "골키퍼", "수비수", "미드필더", "공격수" };
-    int p, j;
+    int j;
 
-    system("cls");
+    CLEAR_SCREEN();
     saekkal(YELLOW);
-    printf("\n=== %s %s 선수 명단 (26명) ===\n\n", gukgi[teamIdx], nara[teamIdx]);
+    printf("\n=== %s %s 선수 명단 (%d명) ===\n\n", gukgi[teamIdx], nara[teamIdx], PLAYER_SU);
+    saekkal(WHITE);
 
-    for (p = 0; p < 4; p++) {
-        saekkal(CYAN);
-        printf("[%s] %s\n", posNames[p], posKor[p]);
-        saekkal(WHITE);
-
-        for (j = 0; j < PLAYER_SU; j++) {
-            if (strcmp(roster[teamIdx][j].pos, posNames[p]) == 0) {
-                printf("  %2d. %-25s (%s)\n",
-                       roster[teamIdx][j].num,
-                       roster[teamIdx][j].name,
-                       roster[teamIdx][j].club);
-            }
-        }
-        printf("\n");
+    for (j = 0; j < PLAYER_SU; j++) {
+        saekkal(j == 0 ? CYAN : WHITE);
+        printf("  [%s] %2d. %-22s (%s)\n",
+               roster[teamIdx][j].pos,
+               roster[teamIdx][j].num,
+               roster[teamIdx][j].name,
+               roster[teamIdx][j].club);
     }
+    printf("\n");
 
     saekkal(YELLOW);
     printf("아무 키나 누르면 게임 시작!!\n");
@@ -468,7 +258,7 @@ void showRoster(int teamIdx, char nara[][20], char *gukgi[]) {
 
 int main() {
     SetConsoleOutputCP(65001);
-    srand(time(NULL));
+    srand((unsigned)time(NULL));
 
     char nara[NARA_SU][20] = {
         "한국", "일본", "브라질", "아르헨티나",
@@ -501,15 +291,17 @@ int main() {
     int result;
     int prob;
     int round;
+    int shooterIdx;   // 1..5 (인덱스 0은 GK)
+    int suddenIdx;
 
-    system("cls");
+    CLEAR_SCREEN();
     title();
     printf("\n");
     saekkal(CYAN);
     printf("   아무 키나 눌러서 시작\n");
     saekkal(WHITE);
     _getch();
-    system("cls");
+    CLEAR_SCREEN();
 
     // 나라선택
     title();
@@ -536,7 +328,7 @@ int main() {
         ai = rand() % NARA_SU;
     } while (ai == me);
 
-    system("cls");
+    CLEAR_SCREEN();
 
     saekkal(YELLOW);
     printf("\n=========== 대결!! ===========\n");
@@ -547,13 +339,16 @@ int main() {
     saekkal(YELLOW);
     printf("\n==============================\n");
     saekkal(WHITE);
+    printf("\n상대팀 GK: %s | 우리팀 GK: %s\n", roster[ai][0].name, roster[me][0].name);
     printf("\n아무 키나 누르면 시작!!\n");
     _getch();
 
-    // 승부차기 
+    // 승부차기
     for (round = 1; round <= 5; round++) {
 
-        system("cls");
+        shooterIdx = round; // 1..5
+
+        CLEAR_SCREEN();
         saekkal(CYAN);
         printf("\n====== %d번째 킥 ======\n\n", round);
         saekkal(WHITE);
@@ -564,6 +359,10 @@ int main() {
         saekkal(GREEN);
         printf(">>> 내 차례 (공격) <<<\n");
         saekkal(WHITE);
+        printf("  슛터: %s %s (%s)\n",
+               nara[me], roster[me][shooterIdx].name, roster[me][shooterIdx].pos);
+        printf("  상대 키퍼: %s %s\n",
+               nara[ai], roster[ai][0].name);
         goalDraw();
 
         printf("어디로 찰래??\n");
@@ -586,7 +385,7 @@ int main() {
             result = (rand() % 10 != 0) ? 1 : 0;
         }
 
-        printf("\n  슛!!\n");
+        printf("\n  %s 슛!!\n", roster[me][shooterIdx].name);
         Sleep(700);
 
         if (result == 1) {
@@ -595,22 +394,26 @@ int main() {
             myScore++;
         } else if (myDir == aiBlock) {
             saekkal(RED);
-            printf("\n  키퍼의 놀라운 선방!\n");
+            printf("\n  키퍼 %s의 놀라운 선방!\n", roster[ai][0].name);
         } else {
             saekkal(RED);
-            printf("\n  너무 긴장한 선수의 실축!\n");
+            printf("\n  %s의 실축!\n", roster[me][shooterIdx].name);
         }
         saekkal(WHITE);
         Sleep(1200);
 
         printf("\n아무 키나 눌러서 계속");
         _getch();
-        system("cls");
+        CLEAR_SCREEN();
 
         // --- 상대 공격 ---
         saekkal(RED);
         printf("상대 공격 차례\n");
         saekkal(WHITE);
+        printf("  상대 슛터: %s %s (%s)\n",
+               nara[ai], roster[ai][shooterIdx].name, roster[ai][shooterIdx].pos);
+        printf("  우리 키퍼: %s %s\n",
+               nara[me], roster[me][0].name);
 
         scoreBoard(nara[me], nara[ai], myScore, aiScore);
         goalDraw();
@@ -635,19 +438,19 @@ int main() {
             result = (rand() % 10 != 0) ? 1 : 0;
         }
 
-        printf("\n  상대 슛!!\n");
+        printf("\n  %s 슛!!\n", roster[ai][shooterIdx].name);
         Sleep(700);
 
         if (result == 1) {
             saekkal(RED);
-            printf("\n  상대의 득점..\n");
+            printf("\n  %s의 득점..\n", roster[ai][shooterIdx].name);
             aiScore++;
         } else if (aiDir == myBlock) {
             saekkal(GREEN);
-            printf("\n  ★★ 키퍼의 놀라운 선방! ★★\n");
+            printf("\n  ★★ 키퍼 %s의 놀라운 선방! ★★\n", roster[me][0].name);
         } else {
             saekkal(GREEN);
-            printf("\n  긴장한 상대의 실축!\n");
+            printf("\n  %s의 실축!\n", roster[ai][shooterIdx].name);
         }
         saekkal(WHITE);
         Sleep(1200);
@@ -656,10 +459,15 @@ int main() {
         _getch();
     }
 
-    // 서든데스 (동점일때)
+    // 서든데스 (동점일때) - 인덱스 1~5 순환
+    suddenIdx = 1;
     while (myScore == aiScore) {
 
-        system("cls");
+        shooterIdx = suddenIdx;
+        suddenIdx++;
+        if (suddenIdx > 5) suddenIdx = 1;
+
+        CLEAR_SCREEN();
         saekkal(RED);
         printf("\n\n  !! 서든데스 !!\n\n");
         saekkal(WHITE);
@@ -668,6 +476,10 @@ int main() {
         scoreBoard(nara[me], nara[ai], myScore, aiScore);
 
         // 내 슛
+        printf("  슛터: %s %s (%s)\n",
+               nara[me], roster[me][shooterIdx].name, roster[me][shooterIdx].pos);
+        printf("  상대 키퍼: %s %s\n",
+               nara[ai], roster[ai][0].name);
         goalDraw();
         printf("슛 방향 선택\n");
         printf("  1. 왼  2. 가운데  3. 오른\n>> ");
@@ -688,15 +500,17 @@ int main() {
 
         Sleep(600);
         if (result == 1) {
-            saekkal(GREEN); printf("\n  GOAL!!\n"); myScore++;
+            saekkal(GREEN); printf("\n  %s GOAL!!\n", roster[me][shooterIdx].name); myScore++;
         } else {
-            saekkal(RED); printf("\n  FAIL..\n");
+            saekkal(RED); printf("\n  %s FAIL..\n", roster[me][shooterIdx].name);
         }
         saekkal(WHITE);
         Sleep(1100);
 
         // 상대 슛
         aiDir = rand() % 3;
+        printf("\n 상대 슛터: %s %s\n", nara[ai], roster[ai][shooterIdx].name);
+        printf(" 우리 키퍼: %s %s\n", nara[me], roster[me][0].name);
         printf("\n 막을 곳 선택 \n");
         printf("  1. 왼  2. 가운데  3. 오른\n>> ");
         scanf("%d", &myBlock);
@@ -714,16 +528,16 @@ int main() {
 
         Sleep(600);
         if (result == 1) {
-            saekkal(RED); printf("\n  상대의 득점..\n"); aiScore++;
+            saekkal(RED); printf("\n  %s의 득점..\n", roster[ai][shooterIdx].name); aiScore++;
         } else {
-            saekkal(GREEN); printf("\n 키퍼의 놀라운 선방!!\n");
+            saekkal(GREEN); printf("\n 키퍼 %s의 놀라운 선방!!\n", roster[me][0].name);
         }
         saekkal(WHITE);
         Sleep(1100);
     }
 
     // 최종결과
-    system("cls");
+    CLEAR_SCREEN();
     title();
     printf("\n");
     scoreBoard(nara[me], nara[ai], myScore, aiScore);
