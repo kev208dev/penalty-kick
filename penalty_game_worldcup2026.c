@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 int N = 12, M = 6;
 
@@ -44,19 +45,13 @@ int judge(int shot, int guess, int atk_v, int def_v) {
         p = atk_v - def_v + 30;
         if (p < 10) p = 10;
         if (p > 55) p = 55;
-        return (rand() % 100) < p ? 0 : 1;
+        return (rand() % 100) < p ? 1 : 0;
     }
     return (rand() % 10) != 0 ? 1 : 0;
 }
 
-int main() {
-    srand((unsigned)time(NULL));
-
-    int me, ai;
-    int ms = 0, as = 0;
-    int md, ad, mb, ab;
-    int r, i, sd;
-
+int pickMe() {
+    int me, i;
     for (i = 0; i < N; i++) {
         printf("%2d. %-12s 공:%d 수:%d\n", i + 1, tn[i], atk[i], def[i]);
     }
@@ -65,13 +60,86 @@ int main() {
     if (scanf("%d", &me) != 1) me = 1;
 
     if (me == 13) {
-        printf("\n카메라로 얼굴을 인식하는중입니다...\n");
-        printf("당신은 한국인입니다.\n");
-        printf("자동으로 한국팀을 선택합니다.\n\n");
+        printf("\n얼굴인식 중입니다");
+        fflush(stdout);
+        for (i = 0; i < 5; i++) {
+            sleep(1);
+            printf(".");
+            fflush(stdout);
+        }
+        sleep(1);
+        printf("\n한국인입니다!\n");
+        sleep(1);
+        printf("한국팀이 선택됩니다.\n\n");
         me = 1;
     }
     if (me < 1 || me > 12) me = 1;
-    me--;
+    return me - 1;
+}
+
+void playRound(int r, int me, int ai, int *ms, int *as) {
+    int md, ad, mb, ab;
+    printf("=== %d라운드 ===\n", r);
+    printf("점수 %d : %d\n", *ms, *as);
+
+    printf("\n우리 슈터: %s | 상대 GK: %s\n", pn[me][r], pn[ai][0]);
+    md = getDir("슛 방향(왼:1, 가운데:2, 오른:3) >> ");
+    ab = rand() % 3;
+    if (judge(md, ab, atk[me], def[ai])) { printf("GOAL!\n"); (*ms)++; }
+    else if (md == ab) printf("%s 선방!\n", pn[ai][0]);
+    else printf("%s 실축!\n", pn[me][r]);
+
+    printf("\n상대 슈터: %s | 우리 GK: %s\n", pn[ai][r], pn[me][0]);
+    ad = rand() % 3;
+    mb = getDir("막을 방향(왼:1, 가운데:2, 오른:3) >> ");
+    if (judge(ad, mb, atk[ai], def[me])) { printf("실점..\n"); (*as)++; }
+    else if (ad == mb) printf("%s 선방!!\n", pn[me][0]);
+    else printf("%s 실축!\n", pn[ai][r]);
+    printf("\n");
+}
+
+void sudden(int me, int ai, int *ms, int *as) {
+    int md, ad, mb, ab;
+    int sd = 1;
+    while (*ms == *as) {
+        printf("=== 서든데스 ===\n");
+        printf("점수 %d : %d\n", *ms, *as);
+
+        printf("\n우리 슈터: %s\n", pn[me][sd]);
+        md = getDir("방향 >> ");
+        ab = rand() % 3;
+        if (judge(md, ab, atk[me], def[ai])) { printf("GOAL!\n"); (*ms)++; }
+        else if (md == ab) printf("%s 선방!\n", pn[ai][0]);
+        else printf("실축!\n");
+
+        printf("\n상대 슈터: %s\n", pn[ai][sd]);
+        ad = rand() % 3;
+        mb = getDir("막을 방향 >> ");
+        if (judge(ad, mb, atk[ai], def[me])) { printf("실점..\n"); (*as)++; }
+        else if (ad == mb) printf("%s 선방!!\n", pn[me][0]);
+        else printf("상대 실축!\n");
+        printf("\n");
+
+        sd++;
+        if (sd > 5) sd = 1;
+    }
+}
+
+void result(int me, int ai, int ms, int as) {
+    printf("=== 최종 ===\n");
+    printf("%s %d : %d %s\n", tn[me], ms, as, tn[ai]);
+    if (ms > as) printf("%s 승!\n", tn[me]);
+    else printf("%s 승\n", tn[ai]);
+}
+
+int main() {
+    srand((unsigned)time(NULL));
+
+    int me, ai;
+    int ms = 0, as = 0;
+    int r, i;
+
+    me = pickMe();
 
     printf("\n[%s 선수]\n", tn[me]);
     for (i = 0; i < M; i++) {
@@ -84,53 +152,11 @@ int main() {
     printf("우리 GK: %s | 상대 GK: %s\n\n", pn[me][0], pn[ai][0]);
 
     for (r = 1; r <= 5; r++) {
-        printf("=== %d라운드 ===\n", r);
-        printf("점수 %d : %d\n", ms, as);
-
-        printf("\n우리 슈터: %s | 상대 GK: %s\n", pn[me][r], pn[ai][0]);
-        md = getDir("방향 >> ");
-        ab = rand() % 3;
-        if (judge(md, ab, atk[me], def[ai])) { printf("GOAL!\n"); ms++; }
-        else if (md == ab) printf("%s 선방!\n", pn[ai][0]);
-        else printf("%s 실축!\n", pn[me][r]);
-
-        printf("\n상대 슈터: %s | 우리 GK: %s\n", pn[ai][r], pn[me][0]);
-        ad = rand() % 3;
-        mb = getDir("막을 방향 >> ");
-        if (judge(ad, mb, atk[ai], def[me])) { printf("실점..\n"); as++; }
-        else if (ad == mb) printf("%s 선방!!\n", pn[me][0]);
-        else printf("%s 실축!\n", pn[ai][r]);
-        printf("\n");
+        playRound(r, me, ai, &ms, &as);
     }
 
-    sd = 1;
-    while (ms == as) {
-        printf("=== 서든데스 ===\n");
-        printf("점수 %d : %d\n", ms, as);
-
-        printf("\n우리 슈터: %s\n", pn[me][sd]);
-        md = getDir("방향 >> ");
-        ab = rand() % 3;
-        if (judge(md, ab, atk[me], def[ai])) { printf("GOAL!\n"); ms++; }
-        else if (md == ab) printf("%s 선방!\n", pn[ai][0]);
-        else printf("실축!\n");
-
-        printf("\n상대 슈터: %s\n", pn[ai][sd]);
-        ad = rand() % 3;
-        mb = getDir("막을 방향 >> ");
-        if (judge(ad, mb, atk[ai], def[me])) { printf("실점..\n"); as++; }
-        else if (ad == mb) printf("%s 선방!!\n", pn[me][0]);
-        else printf("상대 실축!\n");
-        printf("\n");
-
-        sd++;
-        if (sd > 5) sd = 1;
-    }
-
-    printf("=== 최종 ===\n");
-    printf("%s %d : %d %s\n", tn[me], ms, as, tn[ai]);
-    if (ms > as) printf("%s 승!\n", tn[me]);
-    else printf("%s 승\n", tn[ai]);
+    sudden(me, ai, &ms, &as);
+    result(me, ai, ms, as);
 
     return 0;
 }
